@@ -1,0 +1,70 @@
+⚙️ In HTTP/2 — You Use http2.createServer or http2.createSecureServer
+
+
+Here, you don’t manually use net.createServer because the http2 module wraps TCP (or TLS + TCP) and does all the framing, stream multiplexing, header compression (HPACK), etc. for you.
+
+🔒 What is TLS?
+TLS (Transport Layer Security) is a security protocol that:
+
+Encrypts data before it goes over the internet.
+
+Ensures data integrity and authentication (so nobody can eavesdrop or modify it).
+
+TLS is what powers HTTPS.
+
+Think of it this way:
+
+Without TLS:  HTTP --> TCP --> Internet
+With TLS:     HTTP --> TLS --> TCP --> Internet
+
+🧱 Layered Protocol Stack (Visual)
+Let’s look at a real-world layered view:
+
+Your App
+  └── HTTP/2 (requests/responses)
+        └── TLS (encrypt/decrypt)
+              └── TCP (actual connection)
+                    └── IP (Internet layer)
+
+
+
+
+🔧 Node.js Internals – http2.createSecureServer
+What happens when you do this?
+
+const http2 = require('http2');
+const server = http2.createSecureServer({ key, cert }, (stream, headers) => {
+  stream.respond({ ':status': 200 });
+  stream.end('Hello over HTTP/2 with TLS');
+});
+
+Internally, Node.js does:
+
+http2.createSecureServer creates a TLS server using:
+
+
+const tls = require('tls');
+const secureServer = tls.createServer({ key, cert });
+tls.createServer() under the hood uses:
+
+const net = require('net');
+const rawTCPServer = net.createServer();
+to create the actual underlying TCP connection.
+
+Once a connection comes in:
+
+TLS does a handshake to set up encryption.
+
+After TLS is done, Node starts parsing HTTP/2 frames over this secure connection.
+
+If HTTP/2 is negotiated via ALPN (Application-Layer Protocol Negotiation), Node handles it accordingly.
+
+🧠 Analogy
+Imagine:
+
+TCP is a pipe.
+
+TLS wraps the pipe in a locked tunnel so outsiders can’t peek in.
+
+HTTP/2 sends containers (frames) through that locked tunnel.
+

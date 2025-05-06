@@ -1,0 +1,129 @@
+🔍 Real-World Behavior of TCP in HTTP/1.1
+1. ✅ If client sends requests with:
+
+GET / HTTP/1.1
+Host: example.com
+Connection: keep-alive
+The server assumes:
+
+“The client might send more requests, so I’ll keep the TCP connection open for now.”
+
+Most servers (like Apache, NGINX, Node.js) wait for a timeout — e.g., 5–60 seconds of no activity — before closing the connection automatically.
+
+2. ❌ If client sends:
+
+GET /about HTTP/1.1
+Host: example.com
+Connection: close
+Then the server:
+
+Sends the response
+
+Sends a TCP FIN packet to gracefully close the connection
+
+Triggers the socket.on('end') handler if you're in Node.js
+
+3. 🧍 What happens if you never send Connection: close?
+The connection remains open.
+
+If client never sends another request, server will close it after a timeout (idle).
+
+This prevents the server from being overwhelmed with open sockets (called connection leaks if not handled).
+
+
+
+
+
+👉 Real-world HTTP over TCP:
+HTTP/1.0:
+
+One request per TCP connection
+
+Server closes TCP connection after each response
+
+🔁 For multiple resources (e.g., HTML, CSS, JS), the browser creates multiple connections
+
+HTTP/1.1:
+
+Introduced keep-alive by default
+
+Allows multiple requests over the same TCP connection
+
+But still: only one request-response pair at a time
+
+Client or server can still close the connection after a request is done
+
+HTTP/2 and HTTP/3:
+
+Use a single TCP (or QUIC for HTTP/3) connection
+
+Allow multiple streams in parallel (multiplexing)
+
+Much more efficient — avoids opening many TCP connections
+
+
+
+
+
+In HTTP/1.0:
+Each request opens a new TCP connection
+
+After the response, the connection is closed
+
+🧱 Inefficient: slow, wasteful if you request many files (HTML, CSS, JS, images)
+
+🔹 In HTTP/1.1 (✨ persistent connections by default)
+HTTP/1.1 introduced connection reuse using:
+
+Connection: keep-alive
+This allows:
+✅ Multiple requests over a single TCP connection
+✅ No need to re-establish TCP handshake for each request
+
+🔹 In HTTP/2 (Even Better)
+HTTP/2 allows multiplexing:
+
+Multiple parallel streams (not just sequential like 1.1)
+
+Can send several requests simultaneously on the same connection
+
+Each stream is independent — no blocking if one is slow
+
+
+
+🔥 Why is this a problem?
+If a large or slow response is first in line, all following responses are delayed
+
+Even if the rest are small and fast
+
+This bottleneck is exactly what HTTP/2 was designed to solve
+
+
+✅ HTTP/1.1:
+There is only one stream per TCP connection.
+
+All HTTP requests and responses must go through that single stream.
+
+Requests are processed in order:
+Request 2 waits until Response 1 is fully sent.
+
+That means:
+Request 2 waits until response 1 is fully sent
+
+This is called head-of-line blocking (HOL blocking).
+This is why HTTP/1.1 suffers from head-of-line (HOL) blocking at the HTTP layer.
+
+✅ HTTP/2:
+Uses a single TCP connection, but allows multiple streams.
+
+Each request/response pair is assigned its own stream ID.
+
+All streams are multiplexed, meaning they can:
+
+Be sent in parallel,
+
+Be interleaved,
+
+Be prioritized.
+
+Solves HTTP-level HOL blocking.
