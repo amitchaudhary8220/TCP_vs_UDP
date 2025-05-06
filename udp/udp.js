@@ -5,7 +5,7 @@ const socket = dgram.createSocket('udp4');  // based on Ip addess Ipv4
 // whenever receive a message call this callback function
 socket.on('message', (msg, rinfo) => {
     console.log('yes called')
-    console.log(`server got: ${msg} from ${rinfo.address}: ${rinfo.port}`)
+    rconsole.log(`server got: ${msg} from ${rinfo.address}: ${rinfo.port}`)
 })
 
 
